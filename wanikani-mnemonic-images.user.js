@@ -155,14 +155,16 @@
 			const sectionReading = document.getElementById('section-reading');
 			const sectionMeaning = document.getElementById('section-meaning');
 			const subjectIdElement = document.querySelector('label[for="user-response"][data-subject-id]');
+			const subjectMeta = document.querySelector('meta[name="subject_id"]');
 
-			if (subjectIdElement) {
-				const newSubjectId = parseInt(subjectIdElement.getAttribute('data-subject-id'));
+			if (!subjectIdElement && !subjectMeta)
+				return;
 
-				if (newSubjectId !== currentSubjectId) {
-					currentSubjectId = newSubjectId;
-					console.log(`New subject loaded. Subject ID: ${currentSubjectId}`);
-				}
+			const newSubjectId = parseInt(subjectIdElement ? subjectIdElement.getAttribute('data-subject-id') : subjectMeta.getAttribute('content'));
+
+			if (newSubjectId !== currentSubjectId) {
+				currentSubjectId = newSubjectId;
+				console.log(`New subject loaded. Subject ID: ${currentSubjectId}`);
 			}
 
 			if (sectionReading && (!previousSectionReading || !sectionReading.isEqualNode(previousSectionReading))) {
