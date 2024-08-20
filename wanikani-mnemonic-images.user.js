@@ -2,7 +2,7 @@
 // @name         WaniKani Mnemonic Images
 // @namespace    http://tampermonkey.net/
 // @version      1.0
-// @description  Create and display mnemonic images via wanikani-mnemonic-images.com on WaniKani
+// @description  Generate and display mnemonic images on WaniKani
 // @author       Scott Duffey
 // @match        https://*.wanikani.com/*
 // @grant        GM_xmlhttpRequest
