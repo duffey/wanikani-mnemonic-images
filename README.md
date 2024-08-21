@@ -11,7 +11,7 @@ Generate and display mnemonic images on WaniKani.
 
 https://chromewebstore.google.com/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo
 
-2. Install the UserScript
+2. Install the Userscript
 
 https://github.com/duffey/wanikani-mnemonic-images/raw/main/wanikani-mnemonic-images.user.js
 
