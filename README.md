@@ -29,4 +29,4 @@ I assume you maintain the copyright to the generated images, but generating an i
 
 ## Warranty
 
-I am self-hosting the images at wanikani-mnemonic-images.com, and I reserve the right to stop hosting them at any time. If this happens, I will try to find someone else to maintain the project and give reasonable time for people to save the images.
+I am hosting the images at wanikani-mnemonic-images.com, and I reserve the right to stop hosting them at any time. If this happens, I will try to find someone else to maintain the project and give reasonable time for people to save the images.
