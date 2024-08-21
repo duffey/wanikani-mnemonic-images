@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WaniKani Mnemonic Images
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.1
 // @description  Generate and display mnemonic images on WaniKani
 // @author       Scott Duffey
 // @match        https://*.wanikani.com/*
@@ -22,8 +22,10 @@
 	function createImageElement(src) {
 		const img = document.createElement('img');
 		img.src = src;
-		img.style.width = '500px';
-		img.style.height = '500px';
+		img.style.width = '100%'; // Set width to 100% for responsiveness
+		img.style.height = 'auto'; // Adjust height automatically
+		img.style.maxWidth = '500px'; // Ensure the width does not exceed 500px
+		img.style.maxHeight = '500px'; // Ensure the height does not exceed 500px
 		img.style.marginTop = '10px';
 		return img;
 	}
