@@ -50,11 +50,11 @@ async function handlePostRequest(request, env, key, type, id) {
 		}
 	}
 
-	// Parse the request body to get the OpenAI API key
-	const { openai_api_key } = await request.json();
+	// Retrieve the OpenAI API key from environment variables
+	const openai_api_key = env.OPENAI_API_KEY;
 	if (!openai_api_key) {
-		return new Response(JSON.stringify({ error: 'OpenAI API key is required.' }), {
-			status: 400,
+		return new Response(JSON.stringify({ error: 'OpenAI API key is not configured.' }), {
+			status: 500,
 			headers: {
 				'Content-Type': 'application/json',
 				'Access-Control-Allow-Origin': 'https://www.wanikani.com',
@@ -143,3 +143,4 @@ async function generateImage(prompt, client) {
 
 	return imageData;
 }
+

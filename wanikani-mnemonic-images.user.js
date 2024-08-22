@@ -1,14 +1,12 @@
 // ==UserScript==
 // @name         WaniKani Mnemonic Images
 // @namespace    http://tampermonkey.net/
-// @version      1.1
+// @version      1.2
 // @description  Generate and display mnemonic images on WaniKani
 // @author       Scott Duffey
 // @match        https://*.wanikani.com/*
 // @grant        GM_xmlhttpRequest
 // @connect      wanikani-mnemonic-images.com
-// @grant        GM_setValue
-// @grant        GM_getValue
 // ==/UserScript==
 
 (function() {
@@ -66,48 +64,31 @@
 		button.appendChild(spinner);
 
 		button.addEventListener('click', async () => {
-			let openaiApiKey = GM_getValue('openai_api_key');
+			try {
+				buttonText.innerText = `Generating ${sectionType} image...`;
+				spinner.style.display = 'inline-block';
+				button.disabled = true;
+				button.style.cursor = 'not-allowed';
 
-			if (!openaiApiKey) {
-				openaiApiKey = prompt(
-					'Generating images using the OpenAI API will incur charges to your OpenAI account. Please enter your OpenAI API key to proceed:'
-				);
+				const response = await generateImage(subjectId, sectionType);
 
-				if (openaiApiKey) {
-					const saveKey = confirm('Would you like to save this API key for future use?');
-					if (saveKey) {
-						GM_setValue('openai_api_key', openaiApiKey);
-					}
+				if (response.status === 201) {
+					const paddedId = subjectId.toString().padStart(5, '0');
+					const imageUrl = `https://wanikani-mnemonic-images.com/${paddedId}_${sectionType}.png`;
+					await waitForImage(imageUrl, button, spinner);
+
+					const img = createImageElement(imageUrl);
+					button.parentElement.appendChild(img);
+					button.remove();
+				} else {
+					throw new Error('Failed to generate image.');
 				}
-			}
-
-			if (openaiApiKey) {
-				try {
-					buttonText.innerText = `Generating ${sectionType} image...`;
-					spinner.style.display = 'inline-block';
-					button.disabled = true;
-					button.style.cursor = 'not-allowed';
-
-					const response = await generateImage(subjectId, sectionType, openaiApiKey);
-
-					if (response.status === 201) {
-						const paddedId = subjectId.toString().padStart(5, '0');
-						const imageUrl = `https://wanikani-mnemonic-images.com/${paddedId}_${sectionType}.png`;
-						await waitForImage(imageUrl, button, spinner);
-
-						const img = createImageElement(imageUrl);
-						button.parentElement.appendChild(img);
-						button.remove();
-					} else {
-						throw new Error('Failed to generate image.');
-					}
-				} catch (error) {
-					alert('Failed to generate image or invalid API key.');
-					buttonText.innerText = `Generate ${sectionType} image...`;
-					spinner.style.display = 'none';
-					button.disabled = false;
-					button.style.cursor = 'pointer';
-				}
+			} catch (error) {
+				alert('Failed to generate image.');
+				buttonText.innerText = `Generate ${sectionType} image...`;
+				spinner.style.display = 'none';
+				button.disabled = false;
+				button.style.cursor = 'pointer';
 			}
 		});
 
@@ -184,14 +165,13 @@
 	}
 
 	// Function to call the worker API to generate an image
-	async function generateImage(subjectId, sectionType, openaiApiKey) {
+	async function generateImage(subjectId, sectionType) {
 		const url = `https://api.wanikani-mnemonic-images.com/${sectionType}/${subjectId}`;
 		return await fetch(url, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
 			},
-			body: JSON.stringify({ openai_api_key: openaiApiKey })
 		});
 	}
 
@@ -231,3 +211,4 @@
 	// Initialize the script by observing the body for changes to #section-reading and #section-meaning
 	observeSections();
 })();
+
