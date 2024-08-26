@@ -2,8 +2,8 @@
 
 Generate and display mnemonic images on WaniKani.
 
-![Screenshot #1](screenshot_1.png)
-![Screenshot #3](screenshot_3.png)
+![Screenshot #1](www/screenshot_1.png)
+![Screenshot #3](www/screenshot_3.png)
 
 ## Install
 
