@@ -23,7 +23,7 @@ export default {
 // Function to handle POST requests for a single meaning or reading
 async function handlePostRequest(request, env, key, type, id) {
 	const bucket = env.R2;  // Retrieve the R2 bucket from the environment
-	const imageUrl = `https://wanikani-mnemonic-images.com/${key}`;
+	const imageUrl = `https://assets.wanikani-mnemonic-images.com/${key}`;
 
 	// Check if the image already exists in R2
 	try {

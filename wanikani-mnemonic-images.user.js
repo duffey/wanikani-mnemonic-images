@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WaniKani Mnemonic Images
 // @namespace    http://tampermonkey.net/
-// @version      1.2
+// @version      1.3
 // @description  Generate and display mnemonic images on WaniKani
 // @author       Scott Duffey
 // @match        https://*.wanikani.com/*
@@ -74,7 +74,7 @@
 
 				if (response.status === 201) {
 					const paddedId = subjectId.toString().padStart(5, '0');
-					const imageUrl = `https://wanikani-mnemonic-images.com/${paddedId}_${sectionType}.png`;
+					const imageUrl = `https://assets.wanikani-mnemonic-images.com/${paddedId}_${sectionType}.png`;
 					await waitForImage(imageUrl, button, spinner);
 
 					const img = createImageElement(imageUrl);
@@ -98,9 +98,9 @@
 	// Function to inject image or generate button for a given subject ID and section type (meaning or reading)
 	function injectImageOrButton(subjectId, sectionType, sectionContent) {
 		const paddedId = subjectId.toString().padStart(5, '0');
-		const cacheBustedUrl = `https://wanikani-mnemonic-images.com/${paddedId}_${sectionType}.png?_=${new Date().getTime()}`;
+		const cacheBustedUrl = `https://assets.wanikani-mnemonic-images.com/${paddedId}_${sectionType}.png?_=${new Date().getTime()}`;
 
-		if (sectionContent.querySelector(`img[src^="https://wanikani-mnemonic-images.com/${paddedId}_${sectionType}.png"]`)) {
+		if (sectionContent.querySelector(`img[src^="https://assets.wanikani-mnemonic-images.com/${paddedId}_${sectionType}.png"]`)) {
 			console.log(`Image already present for subject ID ${paddedId} (${sectionType}), skipping injection.`);
 			return;
 		}
