@@ -67,8 +67,20 @@ async function handlePostRequest(request, env, key, type, id) {
 		apiKey: openai_api_key,
 	});
 
-	// Load subjects.json from R2
-	const subjects = await loadSubjects(bucket);
+	// Load subject data from KV store
+	const subjectData = await env.SUBJECTS.get(id.toString());
+	if (!subjectData) {
+		return new Response(JSON.stringify({ error: `Subject data not found for ID ${id}.` }), {
+			status: 404,
+			headers: {
+				'Content-Type': 'application/json',
+				'Access-Control-Allow-Origin': 'https://www.wanikani.com',
+			},
+		});
+	}
+
+	// Parse the subject data and get the prompt
+	const subjects = JSON.parse(subjectData);
 	const prompt = getSubjectPrompt(subjects, id, type);
 
 	if (!prompt) {
@@ -108,22 +120,9 @@ function handleOptionsRequest() {
 	});
 }
 
-// Function to load subjects.json from the R2 bucket
-async function loadSubjects(bucket) {
-	const object = await bucket.get('subjects.json');
-	if (!object) {
-		throw new Error('subjects.json not found in the R2 bucket.');
-	}
-
-	const subjectsText = await object.text();
-	return JSON.parse(subjectsText);
-}
-
 // Function to get the prompt from subjects.json based on subject ID and type
-function getSubjectPrompt(subjects, subjectId, type) {
-	const subject = subjects.find((s) => s.id === subjectId);
-	if (!subject) return null;
-
+function getSubjectPrompt(subject, subjectId, type) {
+	// Using the subject data directly as we are fetching specific subject from KV
 	if (type === 'meaning') {
 		let prompt = subject.data.meaning_mnemonic;
 		if (subject.data.meaning_hint) {
