@@ -1,6 +1,6 @@
 # WaniKani Mnemonic Images
 
-Generate and display mnemonic images on WaniKani.
+Generate and display mnemonic images on [WaniKani](https://www.wanikani.com/).
 
 ![Screenshot #1](www/screenshot_1.png)
 ![Screenshot #3](www/screenshot_3.png)
