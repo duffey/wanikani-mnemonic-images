@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WaniKani Mnemonic Images
 // @namespace    http://tampermonkey.net/
-// @version      1.5
+// @version      1.6
 // @description  Generate and display mnemonic images on WaniKani
 // @author       Scott Duffey
 // @match        https://*.wanikani.com/*
@@ -17,9 +17,10 @@
 	let previousSectionMeaning = null;
 
 	// Function to create an image element
-	function createImageElement(src) {
+	function createImageElement(src, id) {
 		const img = document.createElement('img');
 		img.src = src;
+		img.id = id;
 		img.style.width = '100%';
 		img.style.height = 'auto';
 		img.style.maxWidth = '500px';
@@ -33,9 +34,11 @@
 		const button = document.createElement('button');
 		const buttonText = document.createElement('span');
 		buttonText.innerText = `Generate ${sectionType} image...`;
+		const buttonId = `generate-button-${subjectId}-${sectionType}`;
+		button.id = buttonId;
 		button.classList.add('wk-button', 'wk-button--default', 'generate-image-button');
 		button.style.display = 'inline-block';
-		button.style.marginBottom = '30px'; // Set bottom margin to 30px
+		button.style.marginBottom = '30px';
 		button.style.width = 'auto';
 		button.style.cursor = 'pointer';
 
@@ -77,7 +80,7 @@
 					const imageUrl = `https://assets.wanikani-mnemonic-images.com/${paddedId}_${sectionType}.png`;
 					await waitForImage(imageUrl, button, spinner);
 
-					const img = createImageElement(imageUrl);
+					const img = createImageElement(imageUrl, `image-${subjectId}-${sectionType}`);
 					button.insertAdjacentElement('afterend', img);
 					button.remove();
 				} else {
@@ -118,22 +121,12 @@
 		// Define the insertion point based on page type
 		const insertionPoint = sectionContent.querySelector('.user-note')?.parentElement;
 
-		if (sectionContent.querySelector(`img[src^="https://assets.wanikani-mnemonic-images.com/${paddedId}_${sectionType}.png"]`)) {
-			console.log(`Image already present for subject ID ${paddedId} (${sectionType}), skipping injection.`);
-			return;
-		}
-
-		if (sectionContent.querySelector('.generate-image-button')) {
-			console.log(`Generate image button already present for subject ID ${paddedId} (${sectionType}), skipping injection.`);
-			return;
-		}
-
 		GM_xmlhttpRequest({
 			method: 'HEAD',
 			url: cacheBustedUrl,
 			onload: function (response) {
 				if (response.status === 200) {
-					const img = createImageElement(cacheBustedUrl);
+					const img = createImageElement(cacheBustedUrl, `image-${subjectId}-${sectionType}`);
 					insertElement(img, isLessonPage, sectionContent, insertionPoint);
 					console.log(`Image successfully loaded for subject ID ${paddedId} (${sectionType})`);
 				} else if (response.status === 404) {
@@ -153,8 +146,11 @@
 	// Function to observe the body for changes and update relevant sections for lessons and reviews
 	function observeSections() {
 		const observer = new MutationObserver(() => {
-			const sectionReading = document.querySelector('#reading > div > div.subject-slide__sections > section:nth-child(1)') || document.getElementById('section-reading'); // Reading section
-			const sectionMeaning = document.querySelector('#meaning > div > div > section:nth-child(1)') || document.getElementById('section-meaning'); // Meaning section
+			const sections = document.querySelectorAll('.subject-section__title-text');
+			const sectionReading = Array.from(sections).find(el => el.textContent.trim() === 'Reading Explanation' || el.textContent.trim() === 'Reading Mnemonic')?.parentNode?.parentNode ||
+				document.getElementById('section-reading'); // Reading section
+			const sectionMeaning = Array.from(sections).find(el => el.textContent.trim() === 'Meaning Explanation' || el.textContent.trim() === 'Meaning Mnemonic')?.parentNode?.parentNode ||
+			document.getElementById('section-meaning'); // Meaning section
 			const subjectIdElement = document.querySelector('label[for="user-response"][data-subject-id]');
 			const subjectMeta = document.querySelector('meta[name="subject_id"]');
 			const turboFrame = document.querySelector('turbo-frame[src*="subject_id="]'); // Look for turbo-frame with subject_id
@@ -177,12 +173,15 @@
 				console.log(`New subject loaded. Subject ID: ${currentSubjectId}`);
 			}
 
-			if (sectionReading && (!previousSectionReading || !sectionReading.isEqualNode(previousSectionReading) || !document.contains(previousSectionReading))) {
+			const meaningButtonOrImage = document.getElementById(`image-${currentSubjectId}-meaning`) || document.getElementById(`generate-button-${currentSubjectId}-meaning`);
+			const readingButtonOrImage = document.getElementById(`image-${currentSubjectId}-reading`) || document.getElementById(`generate-button-${currentSubjectId}-reading`);
+
+			if (sectionReading && (!previousSectionReading || !sectionReading.isEqualNode(previousSectionReading) || (!document.contains(previousSectionReading) && !readingButtonOrImage))) {
 				previousSectionReading = sectionReading;
 				injectImageOrButton(currentSubjectId, 'reading', sectionReading, !sectionReading.isEqualNode(previousSectionReading));
 			}
 
-			if (sectionMeaning && (!previousSectionMeaning || !sectionMeaning.isEqualNode(previousSectionMeaning) || !document.contains(previousSectionMeaning))) {
+			if (sectionMeaning && (!previousSectionMeaning || !sectionMeaning.isEqualNode(previousSectionMeaning) || (!document.contains(previousSectionMeaning) && !meaningButtonOrImage))) {
 				previousSectionMeaning = sectionMeaning;
 				injectImageOrButton(currentSubjectId, 'meaning', sectionMeaning, !sectionMeaning.isEqualNode(previousSectionMeaning));
 			}
