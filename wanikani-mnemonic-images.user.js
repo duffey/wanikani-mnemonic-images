@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WaniKani Mnemonic Images
 // @namespace    http://tampermonkey.net/
-// @version      1.3
+// @version      1.4
 // @description  Generate and display mnemonic images on WaniKani
 // @author       Scott Duffey
 // @match        https://*.wanikani.com/*
@@ -9,7 +9,7 @@
 // @connect      wanikani-mnemonic-images.com
 // ==/UserScript==
 
-(function() {
+(function () {
 	'use strict';
 
 	let currentSubjectId = null;
@@ -20,11 +20,11 @@
 	function createImageElement(src) {
 		const img = document.createElement('img');
 		img.src = src;
-		img.style.width = '100%'; // Set width to 100% for responsiveness
-		img.style.height = 'auto'; // Adjust height automatically
-		img.style.maxWidth = '500px'; // Ensure the width does not exceed 500px
-		img.style.maxHeight = '500px'; // Ensure the height does not exceed 500px
-		img.style.marginTop = '10px';
+		img.style.width = '100%';
+		img.style.height = 'auto';
+		img.style.maxWidth = '500px';
+		img.style.maxHeight = '500px';
+		img.style.marginBottom = '30px';
 		return img;
 	}
 
@@ -35,7 +35,7 @@
 		buttonText.innerText = `Generate ${sectionType} image...`;
 		button.classList.add('wk-button', 'wk-button--default', 'generate-image-button');
 		button.style.display = 'inline-block';
-		button.style.marginTop = '10px';
+		button.style.marginBottom = '30px'; // Set bottom margin to 30px
 		button.style.width = 'auto';
 		button.style.cursor = 'pointer';
 
@@ -78,7 +78,7 @@
 					await waitForImage(imageUrl, button, spinner);
 
 					const img = createImageElement(imageUrl);
-					button.parentElement.appendChild(img);
+					button.insertAdjacentElement('afterend', img);
 					button.remove();
 				} else {
 					throw new Error('Failed to generate image.');
@@ -95,10 +95,27 @@
 		return button;
 	}
 
+	// Helper function to insert an element
+	function insertElement(element, isLessonPage, sectionContent, insertionPoint) {
+		if (isLessonPage) {
+			sectionContent.insertAdjacentElement('afterend', element); // Insert after the section for lessons
+		} else if (insertionPoint) {
+			insertionPoint.parentNode.insertBefore(element, insertionPoint); // Insert before the note section for reviews
+		} else {
+			sectionContent.appendChild(element); // Append to bottom if no specific location
+		}
+	}
+
 	// Function to inject image or generate button for a given subject ID and section type (meaning or reading)
 	function injectImageOrButton(subjectId, sectionType, sectionContent) {
 		const paddedId = subjectId.toString().padStart(5, '0');
 		const cacheBustedUrl = `https://assets.wanikani-mnemonic-images.com/${paddedId}_${sectionType}.png?_=${new Date().getTime()}`;
+
+		// Determine if we are on a lessons page or a reviews page
+		const isLessonPage = !sectionContent.querySelector('.user-note');
+
+		// Define the insertion point based on page type
+		const insertionPoint = sectionContent.querySelector('.user-note')?.parentElement;
 
 		if (sectionContent.querySelector(`img[src^="https://assets.wanikani-mnemonic-images.com/${paddedId}_${sectionType}.png"]`)) {
 			console.log(`Image already present for subject ID ${paddedId} (${sectionType}), skipping injection.`);
@@ -113,39 +130,48 @@
 		GM_xmlhttpRequest({
 			method: 'HEAD',
 			url: cacheBustedUrl,
-			onload: function(response) {
+			onload: function (response) {
 				if (response.status === 200) {
 					const img = createImageElement(cacheBustedUrl);
-					sectionContent.appendChild(img);
+					insertElement(img, isLessonPage, sectionContent, insertionPoint);
 					console.log(`Image successfully loaded for subject ID ${paddedId} (${sectionType})`);
 				} else if (response.status === 404) {
 					const button = createGenerateButton(subjectId, sectionType);
-					sectionContent.appendChild(button);
+					insertElement(button, isLessonPage, sectionContent, insertionPoint);
 					console.log(`Image not found for subject ID ${paddedId} (${sectionType}), adding generate button.`);
 				} else {
 					console.error(`Failed to load image for subject ID ${paddedId} (${sectionType}): ${response.status}`);
 				}
 			},
-			onerror: function(error) {
+			onerror: function (error) {
 				console.error(`Request error for subject ID ${paddedId} (${sectionType}):`, error);
 			}
 		});
 	}
 
-	// Function to observe the body for changes and update #section-reading and #section-meaning
+	// Function to observe the body for changes and update relevant sections for lessons and reviews
 	function observeSections() {
 		const observer = new MutationObserver(() => {
-			const sectionReading = document.getElementById('section-reading');
-			const sectionMeaning = document.getElementById('section-meaning');
+			const sectionReading = document.querySelector('#reading > div > div > section:nth-child(1)') || document.getElementById('section-reading'); // Reading section
+			const sectionMeaning = document.querySelector('#meaning > div > div > section:nth-child(1)') || document.getElementById('section-meaning'); // Meaning section
 			const subjectIdElement = document.querySelector('label[for="user-response"][data-subject-id]');
 			const subjectMeta = document.querySelector('meta[name="subject_id"]');
+			const turboFrame = document.querySelector('turbo-frame[src*="subject_id="]'); // Look for turbo-frame with subject_id
 
-			if (!subjectIdElement && !subjectMeta)
-				return;
+			let newSubjectId = null;
+			if (subjectIdElement) {
+				newSubjectId = parseInt(subjectIdElement.getAttribute('data-subject-id'));
+			} else if (subjectMeta) {
+				newSubjectId = parseInt(subjectMeta.getAttribute('content'));
+			} else if (turboFrame) {
+				const src = turboFrame.getAttribute('src');
+				const match = src.match(/subject_id=(\d+)/);
+				if (match) {
+					newSubjectId = parseInt(match[1]);
+				}
+			}
 
-			const newSubjectId = parseInt(subjectIdElement ? subjectIdElement.getAttribute('data-subject-id') : subjectMeta.getAttribute('content'));
-
-			if (newSubjectId !== currentSubjectId) {
+			if (newSubjectId && newSubjectId !== currentSubjectId) {
 				currentSubjectId = newSubjectId;
 				console.log(`New subject loaded. Subject ID: ${currentSubjectId}`);
 			}
@@ -184,14 +210,14 @@
 				GM_xmlhttpRequest({
 					method: 'HEAD',
 					url: cacheBustedUrl,
-					onload: function(response) {
+					onload: function (response) {
 						if (response.status === 200) {
 							resolve(true);
 						} else {
 							resolve(false);
 						}
 					},
-					onerror: function() {
+					onerror: function () {
 						resolve(false);
 					}
 				});
@@ -208,7 +234,6 @@
 		throw new Error('Image did not become available in time.');
 	}
 
-	// Initialize the script by observing the body for changes to #section-reading and #section-meaning
+	// Initialize the script by observing the body for changes
 	observeSections();
 })();
-
