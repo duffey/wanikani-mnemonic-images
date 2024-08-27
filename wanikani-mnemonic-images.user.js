@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WaniKani Mnemonic Images
 // @namespace    http://tampermonkey.net/
-// @version      1.6
+// @version      1.7
 // @description  Generate and display mnemonic images on WaniKani
 // @author       Scott Duffey
 // @match        https://*.wanikani.com/*
@@ -25,7 +25,7 @@
 		img.style.height = 'auto';
 		img.style.maxWidth = '500px';
 		img.style.maxHeight = '500px';
-		img.style.marginBottom = '30px';
+		img.style.marginTop = '10px';
 		return img;
 	}
 
@@ -38,7 +38,7 @@
 		button.id = buttonId;
 		button.classList.add('wk-button', 'wk-button--default', 'generate-image-button');
 		button.style.display = 'inline-block';
-		button.style.marginBottom = '30px';
+		button.style.marginTop = '10px';
 		button.style.width = 'auto';
 		button.style.cursor = 'pointer';
 
@@ -98,28 +98,12 @@
 		return button;
 	}
 
-	// Helper function to insert an element
-	function insertElement(element, isLessonPage, sectionContent, insertionPoint) {
-		if (isLessonPage) {
-			sectionContent.insertAdjacentElement('afterend', element); // Insert after the section for lessons
-		} else if (insertionPoint) {
-			insertionPoint.parentNode.insertBefore(element, insertionPoint); // Insert before the note section for reviews
-		} else {
-			sectionContent.appendChild(element); // Append to bottom if no specific location
-		}
-	}
-
 	// Function to inject image or generate button for a given subject ID and section type (meaning or reading)
 	function injectImageOrButton(subjectId, sectionType, sectionContent, useCacheBusting) {
 		const paddedId = subjectId.toString().padStart(5, '0');
 		let cacheBustedUrl = `https://assets.wanikani-mnemonic-images.com/${paddedId}_${sectionType}.png`;
 		if (useCacheBusting) cacheBustedUrl += `?_=${new Date().getTime()}`;
 
-		// Determine if we are on a lessons page or a reviews page
-		const isLessonPage = !sectionContent.querySelector('.user-note');
-
-		// Define the insertion point based on page type
-		const insertionPoint = sectionContent.querySelector('.user-note')?.parentElement;
 
 		GM_xmlhttpRequest({
 			method: 'HEAD',
@@ -127,11 +111,11 @@
 			onload: function (response) {
 				if (response.status === 200) {
 					const img = createImageElement(cacheBustedUrl, `image-${subjectId}-${sectionType}`);
-					insertElement(img, isLessonPage, sectionContent, insertionPoint);
+					sectionContent.appendChild(img);
 					console.log(`Image successfully loaded for subject ID ${paddedId} (${sectionType})`);
 				} else if (response.status === 404) {
 					const button = createGenerateButton(subjectId, sectionType);
-					insertElement(button, isLessonPage, sectionContent, insertionPoint);
+					sectionContent.appendChild(button);
 					console.log(`Image not found for subject ID ${paddedId} (${sectionType}), adding generate button.`);
 				} else {
 					console.error(`Failed to load image for subject ID ${paddedId} (${sectionType}): ${response.status}`);
@@ -146,11 +130,10 @@
 	// Function to observe the body for changes and update relevant sections for lessons and reviews
 	function observeSections() {
 		const observer = new MutationObserver(() => {
-			const sections = document.querySelectorAll('.subject-section__title-text');
-			const sectionReading = Array.from(sections).find(el => el.textContent.trim() === 'Reading Explanation' || el.textContent.trim() === 'Reading Mnemonic')?.parentNode?.parentNode ||
-				document.getElementById('section-reading'); // Reading section
-			const sectionMeaning = Array.from(sections).find(el => el.textContent.trim() === 'Meaning Explanation' || el.textContent.trim() === 'Meaning Mnemonic')?.parentNode?.parentNode ||
-			document.getElementById('section-meaning'); // Meaning section
+			const sectionReading = Array.from(document.querySelectorAll('.subject-section')).filter((e) => e.textContent.includes('Reading Mnemonic') || e.textContent.includes('Reading Explanation'))?.[0]?.querySelector('.subject-section__content')
+				|| Array.from(document.getElementById('section-reading')?.querySelectorAll('.subject-section__subsection') ?? []).filter((e) => e.textContent.includes('Mnemonic') || e.textContent.includes('Explanation'))?.[0];
+			const sectionMeaning = Array.from(document.querySelectorAll('.subject-section')).filter((e) => e.textContent.includes('Meaning Mnemonic') || e.textContent.includes('Meaning Explanation'))?.[0]?.querySelector('.subject-section__content')
+				|| Array.from(document.getElementById('section-meaning')?.querySelectorAll('.subject-section__subsection') ?? []).filter((e) => e.textContent.includes('Mnemonic') || e.textContent.includes('Explanation'))?.[0];
 			const subjectIdElement = document.querySelector('label[for="user-response"][data-subject-id]');
 			const subjectMeta = document.querySelector('meta[name="subject_id"]');
 			const turboFrame = document.querySelector('turbo-frame[src*="subject_id="]'); // Look for turbo-frame with subject_id
