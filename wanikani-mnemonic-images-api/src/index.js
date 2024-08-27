@@ -4,8 +4,8 @@ export default {
 	async fetch(request, env) {
 		const url = new URL(request.url);
 		const pathParts = url.pathname.split('/');
-		const type = pathParts[1];  // 'meaning' or 'reading'
-		const id = parseInt(pathParts[2], 10);  // Subject ID
+		const type = pathParts[1]; // 'meaning' or 'reading'
+		const id = parseInt(pathParts[2], 10); // Subject ID
 		const key = `${id.toString().padStart(5, '0')}_${type}.png`;
 
 		if (request.method === 'POST') {
@@ -22,7 +22,7 @@ export default {
 
 // Function to handle POST requests for a single meaning or reading
 async function handlePostRequest(request, env, key, type, id) {
-	const bucket = env.R2;  // Retrieve the R2 bucket from the environment
+	const bucket = env.R2; // Retrieve the R2 bucket from the environment
 	const imageUrl = `https://assets.wanikani-mnemonic-images.com/${key}`;
 
 	// Check if the image already exists in R2
@@ -124,9 +124,19 @@ function getSubjectPrompt(subjects, subjectId, type) {
 	const subject = subjects.find((s) => s.id === subjectId);
 	if (!subject) return null;
 
-	return type === 'meaning'
-		? subject.data.meaning_mnemonic
-		: subject.data.reading_mnemonic;
+	if (type === 'meaning') {
+		let prompt = subject.data.meaning_mnemonic;
+		if (subject.data.meaning_hint) {
+			prompt += `\n\n${subject.data.meaning_hint}`;
+		}
+		return prompt;
+	} else {
+		let prompt = subject.data.reading_mnemonic;
+		if (subject.data.reading_hint) {
+			prompt += `\n\n${subject.data.reading_hint}`;
+		}
+		return prompt;
+	}
 }
 
 // Function to generate the image using OpenAI's API
@@ -143,4 +153,3 @@ async function generateImage(prompt, client) {
 
 	return imageData;
 }
-
