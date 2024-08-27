@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WaniKani Mnemonic Images
 // @namespace    http://tampermonkey.net/
-// @version      1.4
+// @version      1.5
 // @description  Generate and display mnemonic images on WaniKani
 // @author       Scott Duffey
 // @match        https://*.wanikani.com/*
@@ -107,9 +107,10 @@
 	}
 
 	// Function to inject image or generate button for a given subject ID and section type (meaning or reading)
-	function injectImageOrButton(subjectId, sectionType, sectionContent) {
+	function injectImageOrButton(subjectId, sectionType, sectionContent, useCacheBusting) {
 		const paddedId = subjectId.toString().padStart(5, '0');
-		const cacheBustedUrl = `https://assets.wanikani-mnemonic-images.com/${paddedId}_${sectionType}.png?_=${new Date().getTime()}`;
+		let cacheBustedUrl = `https://assets.wanikani-mnemonic-images.com/${paddedId}_${sectionType}.png`;
+		if (useCacheBusting) cacheBustedUrl += `?_=${new Date().getTime()}`;
 
 		// Determine if we are on a lessons page or a reviews page
 		const isLessonPage = !sectionContent.querySelector('.user-note');
@@ -152,7 +153,7 @@
 	// Function to observe the body for changes and update relevant sections for lessons and reviews
 	function observeSections() {
 		const observer = new MutationObserver(() => {
-			const sectionReading = document.querySelector('#reading > div > div > section:nth-child(1)') || document.getElementById('section-reading'); // Reading section
+			const sectionReading = document.querySelector('#reading > div > div.subject-slide__sections > section:nth-child(1)') || document.getElementById('section-reading'); // Reading section
 			const sectionMeaning = document.querySelector('#meaning > div > div > section:nth-child(1)') || document.getElementById('section-meaning'); // Meaning section
 			const subjectIdElement = document.querySelector('label[for="user-response"][data-subject-id]');
 			const subjectMeta = document.querySelector('meta[name="subject_id"]');
@@ -176,14 +177,14 @@
 				console.log(`New subject loaded. Subject ID: ${currentSubjectId}`);
 			}
 
-			if (sectionReading && (!previousSectionReading || !sectionReading.isEqualNode(previousSectionReading))) {
+			if (sectionReading && (!previousSectionReading || !sectionReading.isEqualNode(previousSectionReading) || !document.contains(previousSectionReading))) {
 				previousSectionReading = sectionReading;
-				injectImageOrButton(currentSubjectId, 'reading', sectionReading);
+				injectImageOrButton(currentSubjectId, 'reading', sectionReading, !sectionReading.isEqualNode(previousSectionReading));
 			}
 
-			if (sectionMeaning && (!previousSectionMeaning || !sectionMeaning.isEqualNode(previousSectionMeaning))) {
+			if (sectionMeaning && (!previousSectionMeaning || !sectionMeaning.isEqualNode(previousSectionMeaning) || !document.contains(previousSectionMeaning))) {
 				previousSectionMeaning = sectionMeaning;
-				injectImageOrButton(currentSubjectId, 'meaning', sectionMeaning);
+				injectImageOrButton(currentSubjectId, 'meaning', sectionMeaning, !sectionMeaning.isEqualNode(previousSectionMeaning));
 			}
 		});
 
