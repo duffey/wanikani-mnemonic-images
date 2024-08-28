@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WaniKani Mnemonic Images
 // @namespace    http://tampermonkey.net/
-// @version      1.7
+// @version      1.8
 // @description  Generate and display mnemonic images on WaniKani
 // @author       Scott Duffey
 // @match        https://*.wanikani.com/*
@@ -99,10 +99,10 @@
 	}
 
 	// Function to inject image or generate button for a given subject ID and section type (meaning or reading)
-	function injectImageOrButton(subjectId, sectionType, sectionContent, useCacheBusting) {
+	function injectImageOrButton(subjectId, sectionType, sectionContent, disableCacheBusting) {
 		const paddedId = subjectId.toString().padStart(5, '0');
 		let cacheBustedUrl = `https://assets.wanikani-mnemonic-images.com/${paddedId}_${sectionType}.png`;
-		if (useCacheBusting) cacheBustedUrl += `?_=${new Date().getTime()}`;
+		if (!disableCacheBusting) cacheBustedUrl += `?_=${new Date().getTime()}`;
 
 
 		GM_xmlhttpRequest({
@@ -130,10 +130,12 @@
 	// Function to observe the body for changes and update relevant sections for lessons and reviews
 	function observeSections() {
 		const observer = new MutationObserver(() => {
-			const sectionReading = Array.from(document.querySelectorAll('.subject-section')).filter((e) => e.textContent.includes('Reading Mnemonic') || e.textContent.includes('Reading Explanation'))?.[0]?.querySelector('.subject-section__content')
-				|| Array.from(document.getElementById('section-reading')?.querySelectorAll('.subject-section__subsection') ?? []).filter((e) => e.textContent.includes('Mnemonic') || e.textContent.includes('Explanation'))?.[0];
-			const sectionMeaning = Array.from(document.querySelectorAll('.subject-section')).filter((e) => e.textContent.includes('Meaning Mnemonic') || e.textContent.includes('Meaning Explanation'))?.[0]?.querySelector('.subject-section__content')
-				|| Array.from(document.getElementById('section-meaning')?.querySelectorAll('.subject-section__subsection') ?? []).filter((e) => e.textContent.includes('Mnemonic') || e.textContent.includes('Explanation'))?.[0];
+			const lessonSectionReading = Array.from(document.querySelectorAll('.subject-section')).filter((e) => e.textContent.includes('Reading Mnemonic') || e.textContent.includes('Reading Explanation'))?.[0]?.querySelector('.subject-section__content');
+			const reviewSectionReading = Array.from(document.getElementById('section-reading')?.querySelectorAll('.subject-section__subsection') ?? []).filter((e) => e.textContent.includes('Mnemonic') || e.textContent.includes('Explanation'))?.[0];
+			const sectionReading = lessonSectionReading || reviewSectionReading;
+			const lessonSectionMeaning = Array.from(document.querySelectorAll('.subject-section')).filter((e) => e.textContent.includes('Meaning Mnemonic') || e.textContent.includes('Meaning Explanation'))?.[0]?.querySelector('.subject-section__content');
+			const reviewSectionMeaning = Array.from(document.getElementById('section-meaning')?.querySelectorAll('.subject-section__subsection') ?? []).filter((e) => e.textContent.includes('Mnemonic') || e.textContent.includes('Explanation'))?.[0];
+			const sectionMeaning = lessonSectionMeaning || reviewSectionMeaning;
 			const subjectIdElement = document.querySelector('label[for="user-response"][data-subject-id]');
 			const subjectMeta = document.querySelector('meta[name="subject_id"]');
 			const turboFrame = document.querySelector('turbo-frame[src*="subject_id="]'); // Look for turbo-frame with subject_id
@@ -161,12 +163,12 @@
 
 			if (sectionReading && (!previousSectionReading || !sectionReading.isEqualNode(previousSectionReading) || (!document.contains(previousSectionReading) && !readingButtonOrImage))) {
 				previousSectionReading = sectionReading;
-				injectImageOrButton(currentSubjectId, 'reading', sectionReading, !sectionReading.isEqualNode(previousSectionReading));
+				injectImageOrButton(currentSubjectId, 'reading', sectionReading, sectionReading.isEqualNode(previousSectionReading) && lessonSectionReading);
 			}
 
 			if (sectionMeaning && (!previousSectionMeaning || !sectionMeaning.isEqualNode(previousSectionMeaning) || (!document.contains(previousSectionMeaning) && !meaningButtonOrImage))) {
 				previousSectionMeaning = sectionMeaning;
-				injectImageOrButton(currentSubjectId, 'meaning', sectionMeaning, !sectionMeaning.isEqualNode(previousSectionMeaning));
+				injectImageOrButton(currentSubjectId, 'meaning', sectionMeaning, sectionMeaning.isEqualNode(previousSectionMeaning) && lessonSectionMeaning);
 			}
 		});
 
