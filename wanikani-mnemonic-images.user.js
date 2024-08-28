@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WaniKani Mnemonic Images
 // @namespace    http://tampermonkey.net/
-// @version      1.8
+// @version      1.9
 // @description  Generate and display mnemonic images on WaniKani
 // @author       Scott Duffey
 // @match        https://*.wanikani.com/*
@@ -99,18 +99,16 @@
 	}
 
 	// Function to inject image or generate button for a given subject ID and section type (meaning or reading)
-	function injectImageOrButton(subjectId, sectionType, sectionContent, disableCacheBusting) {
+	function injectImageOrButton(subjectId, sectionType, sectionContent) {
 		const paddedId = subjectId.toString().padStart(5, '0');
-		let cacheBustedUrl = `https://assets.wanikani-mnemonic-images.com/${paddedId}_${sectionType}.png`;
-		if (!disableCacheBusting) cacheBustedUrl += `?_=${new Date().getTime()}`;
-
+		let url = `https://assets.wanikani-mnemonic-images.com/${paddedId}_${sectionType}.png`;
 
 		GM_xmlhttpRequest({
 			method: 'HEAD',
-			url: cacheBustedUrl,
+			url: url,
 			onload: function (response) {
 				if (response.status === 200) {
-					const img = createImageElement(cacheBustedUrl, `image-${subjectId}-${sectionType}`);
+					const img = createImageElement(url, `image-${subjectId}-${sectionType}`);
 					sectionContent.appendChild(img);
 					console.log(`Image successfully loaded for subject ID ${paddedId} (${sectionType})`);
 				} else if (response.status === 404) {
@@ -163,12 +161,12 @@
 
 			if (sectionReading && (!previousSectionReading || !sectionReading.isEqualNode(previousSectionReading) || (!document.contains(previousSectionReading) && !readingButtonOrImage))) {
 				previousSectionReading = sectionReading;
-				injectImageOrButton(currentSubjectId, 'reading', sectionReading, sectionReading.isEqualNode(previousSectionReading) && lessonSectionReading);
+				injectImageOrButton(currentSubjectId, 'reading', sectionReading);
 			}
 
 			if (sectionMeaning && (!previousSectionMeaning || !sectionMeaning.isEqualNode(previousSectionMeaning) || (!document.contains(previousSectionMeaning) && !meaningButtonOrImage))) {
 				previousSectionMeaning = sectionMeaning;
-				injectImageOrButton(currentSubjectId, 'meaning', sectionMeaning, sectionMeaning.isEqualNode(previousSectionMeaning) && lessonSectionMeaning);
+				injectImageOrButton(currentSubjectId, 'meaning', sectionMeaning);
 			}
 		});
 
@@ -190,11 +188,10 @@
 	async function waitForImage(imageUrl, button, spinner) {
 		let attempts = 0;
 		while (attempts < 30) {
-			const cacheBustedUrl = `${imageUrl}?_=${new Date().getTime()}`;
 			const success = await new Promise((resolve) => {
 				GM_xmlhttpRequest({
 					method: 'HEAD',
-					url: cacheBustedUrl,
+					url: imageUrl,
 					onload: function (response) {
 						if (response.status === 200) {
 							resolve(true);
